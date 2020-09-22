@@ -1,0 +1,353 @@
+package Client_B;
+
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.Scanner;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.RowConstraints;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
+public class Client extends Application {
+
+	static Stage window;
+	static Scene loginUI;
+
+	static HBox searchHBox, studentHBox;
+	static ObservableList<Student> studentsObservable = FXCollections.observableArrayList();
+	static TableView<Student> studentDataTable;
+	static BorderPane databasePane = new BorderPane();
+	static Scene database = new Scene(databasePane);
+
+	public static void main(String[] args) {
+		launch(args);
+	}
+
+	public void start(Stage primaryStage) throws IOException, JSONException {
+		window = primaryStage;
+		window.setTitle("Opdracht B");
+
+		loginUI();
+		setupDatabaseUI();
+
+		window.setScene(loginUI);
+		window.show();
+	}
+
+	public static void loginUI() throws IOException {
+		GridPane loginGridPane = new GridPane();
+		loginGridPane.setAlignment(Pos.CENTER);
+
+		loginGridPane.getColumnConstraints().addAll(new ColumnConstraints(100), new ColumnConstraints(200),
+				new ColumnConstraints(80));
+		loginGridPane.getRowConstraints().addAll(new RowConstraints(50), new RowConstraints(50),
+				new RowConstraints(50));
+
+		Text usernameText = new Text("Username: ");
+		Text passwordText = new Text("Password: ");
+
+		TextField usernameTextField = new TextField("Username...");
+		TextField passwordTextField = new TextField("Password...");
+
+		Button signUpButton = new Button("Sign up!");
+		Button loginButton = new Button("Login...");
+		Button cancelButton = new Button("Cancel...");
+
+		loginGridPane.addRow(0, usernameText, usernameTextField);
+		loginGridPane.addRow(1, passwordText, passwordTextField);
+		loginGridPane.addRow(2, signUpButton, loginButton, cancelButton);
+
+		loginUI = new Scene(loginGridPane, 500, 200);
+
+		signUpButton.setOnAction(e -> {
+			String username = usernameTextField.getText();
+			String password = passwordTextField.getText();
+			try {
+				signUp(username, password);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		});
+
+		loginButton.setOnAction(e -> {
+			String username = usernameTextField.getText();
+			String password = passwordTextField.getText();
+			try {
+				if (logIn(username, password) == true) {
+					window.setScene(database);
+					window.setMaximized(true);
+					window.show();
+				} else {
+					System.out.println("User doesnt exist or password is incorrect!");
+				}
+			} catch (IOException e1) {
+
+				e1.printStackTrace();
+			}
+		});
+
+		cancelButton.setOnAction(e -> {
+			System.exit(0);
+		});
+
+	}
+
+	@SuppressWarnings("unchecked")
+	public static void setupDatabaseUI() {
+		searchHBox = new HBox(20);
+		searchHBox.setPadding(new Insets(20, 20, 20, 20));
+
+		TextField searchStudentID = new TextField("Student ID...");
+		Button searchButton = new Button("Search...");
+
+		searchButton.setOnAction(e -> {
+			System.out.println(searchStudentID.getText());
+			try {
+				String studentData = getStudentData(searchStudentID.getText());
+				JSONObject jsonobject = new JSONObject(studentData);
+				String[] courses = jsonobject.getString("courses").split(",|, ");
+				Student Student = new Student(jsonobject.getString("studentID"), jsonobject.getString("firstName"),
+						jsonobject.getString("lastName"), jsonobject.getString("averageGrade"), courses);
+				studentsObservable.clear();
+				studentsObservable.add(Student);
+			} catch (Exception E) {
+				System.out.println("No student found!");
+			}
+		});
+
+		Button getAllStudentsButton = new Button("Get all students!");
+		getAllStudentsButton.setOnAction(e -> {
+			studentsObservable.clear();
+			System.out.println("Doesnt work yet");
+		});
+
+		TextField firstName = new TextField("First Name");
+		TextField lastName = new TextField("Last name");
+		TextField studentID = new TextField("StudentID");
+		TextField averageGrade = new TextField("Average grade");
+		TextField coursesTextfield = new TextField("course1, course2");
+
+		Button addStudent = new Button("Update Student");
+		addStudent.setMinWidth(150);
+		addStudent.setOnAction(e -> {
+			Student newStudent = new Student(studentID.getText(), firstName.getText(), lastName.getText(),
+					averageGrade.getText(), coursesTextfield.getText().split(", |,"));
+			try {
+				setStudentData(studentID.getText(), firstName.getText(), lastName.getText(), averageGrade.getText(),
+						coursesTextfield.getText());
+			} catch (IOException e1) {
+				System.out.println("Can't add student");
+				e1.printStackTrace();
+			}
+			studentsObservable.clear();
+			studentsObservable.add(newStudent);
+
+			firstName.setText("First Name");
+			lastName.setText("Last Name");
+			studentID.setText("StudentID");
+			averageGrade.setText("Average Grade");
+			coursesTextfield.setText("course1, course2");
+		});
+
+		studentHBox = new HBox(5);
+		studentHBox.setMaxWidth(800);
+		studentHBox.getChildren().addAll(studentID, firstName, lastName, averageGrade, coursesTextfield, addStudent);
+
+		studentDataTable = new TableView<Student>();
+		studentDataTable.setRowFactory(tv -> {
+			TableRow<Student> row = new TableRow<>();
+			row.setOnMouseClicked(event -> {
+				try {
+					if (event.getClickCount() == 2 && (!row.isEmpty())) {
+						Student student = row.getItem();
+						firstName.setText(student.getFirstName());
+						lastName.setText(student.getLastName());
+						studentID.setText(student.getStudentID());
+						averageGrade.setText(student.getAverageGrade());
+						coursesTextfield.setText(student.getCourses());
+					}
+				} catch (Exception e) {
+
+				}
+			});
+			return row;
+		});
+		TableColumn<Student, String> columnStudent1 = new TableColumn<Student, String>("Student-ID");
+		TableColumn<Student, String> columnStudent2 = new TableColumn<Student, String>("First Name");
+		TableColumn<Student, String> columnStudent3 = new TableColumn<Student, String>("Last Name");
+		TableColumn<Student, String> columnStudent4 = new TableColumn<Student, String>("Average grade");
+		TableColumn<Student, String[]> columnStudent5 = new TableColumn<Student, String[]>("Courses");
+
+		studentDataTable.getColumns().addAll(columnStudent1, columnStudent2, columnStudent3, columnStudent4,
+				columnStudent5);
+
+		columnStudent1.setCellValueFactory(new PropertyValueFactory<Student, String>("studentID"));
+		columnStudent2.setCellValueFactory(new PropertyValueFactory<Student, String>("firstName"));
+		columnStudent3.setCellValueFactory(new PropertyValueFactory<Student, String>("lastName"));
+		columnStudent4.setCellValueFactory(new PropertyValueFactory<Student, String>("averageGrade"));
+		columnStudent5.setCellValueFactory(new PropertyValueFactory<Student, String[]>("Courses"));
+
+		columnStudent1.prefWidthProperty().bind(studentDataTable.widthProperty().multiply(0.15));
+		columnStudent2.prefWidthProperty().bind(studentDataTable.widthProperty().multiply(0.15));
+		columnStudent3.prefWidthProperty().bind(studentDataTable.widthProperty().multiply(0.15));
+		columnStudent4.prefWidthProperty().bind(studentDataTable.widthProperty().multiply(0.1));
+		columnStudent5.prefWidthProperty().bind(studentDataTable.widthProperty().multiply(0.45));
+
+		studentDataTable.setMinWidth(800);
+		studentDataTable.setMaxWidth(800);
+
+		searchHBox.getChildren().addAll(searchStudentID, searchButton, getAllStudentsButton);
+
+		studentDataTable.setItems(studentsObservable);
+
+		VBox leftVBox = new VBox(20);
+		leftVBox.setAlignment(Pos.TOP_LEFT);
+		searchHBox.setAlignment(Pos.TOP_LEFT);
+		studentHBox.setAlignment(Pos.TOP_LEFT);
+
+		leftVBox.getChildren().addAll(searchHBox, studentHBox, studentDataTable);
+		databasePane.setLeft(leftVBox);
+	}
+
+	@SuppressWarnings("deprecation")
+	public static void signUp(String username, String password) throws IOException {
+		boolean freeUsername = false;
+		HttpURLConnection connection = (HttpURLConnection) new URL(
+				"http://localhost:8080/OpdrachtBOIS/student/" + username).openConnection();
+		connection.setRequestMethod("GET");
+
+		if (connection.getResponseCode() == 200) {
+		
+			String checkUser = "";
+			Scanner checkResponse = new Scanner(connection.getInputStream());
+			checkUser += checkResponse.nextLine();
+
+			while (checkResponse.hasNext()) {
+				checkUser += checkResponse.nextLine();
+			}
+			checkResponse.close();
+
+			if (checkUser.equals("empty")) {
+				freeUsername = true;
+			}
+		}
+		connection = (HttpURLConnection) new URL("http://localhost:8080/OpdrachtBOIS/student/" + username)
+				.openConnection();
+		connection.setRequestMethod("POST");
+		if (freeUsername) {
+
+			String postData = "";
+			postData += "&username=" + URLEncoder.encode(username);
+			postData += "&password=" + URLEncoder.encode(password);
+
+			connection.setDoOutput(true);
+			OutputStreamWriter wr = new OutputStreamWriter(connection.getOutputStream());
+			wr.write(postData);
+			wr.flush();
+			
+
+			int responseCode = connection.getResponseCode();
+			if (responseCode == 200) {
+				System.out.println("You have been succesfully signed up");
+			} else if (responseCode == 404) {
+				System.out.println("You didn't sign up! Connection failed!");
+			}
+		} else {
+			System.out.println("User already exist!");
+		}
+	}
+
+	public static boolean logIn(String username, String password) throws IOException {
+		System.out.println(username);
+		HttpURLConnection connection = (HttpURLConnection) new URL(
+				"http://localhost:8080/OpdrachtBOIS/student/" + username).openConnection();
+		connection.setRequestMethod("GET");
+		int responseCode = connection.getResponseCode();
+		if (responseCode == 200) {
+			String correctPassword = "";
+			Scanner scanner = new Scanner(connection.getInputStream());
+			correctPassword += scanner.nextLine();
+			scanner.close();
+
+			if (correctPassword.equals(password)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static String getStudentData(String student) throws IOException {
+
+		HttpURLConnection connection = (HttpURLConnection) new URL(
+				"http://localhost:8080/OpdrachtBOIS/student/" + student).openConnection();
+
+		connection.setRequestMethod("GET");
+		connection.setDoOutput(true);
+		int responseCode = connection.getResponseCode();
+		if (responseCode == 200) {
+			System.out.println("connected");
+			String response = "";
+			Scanner scanner = new Scanner(connection.getInputStream());
+			while (scanner.hasNextLine()) {
+				response += scanner.nextLine();
+				response += "\n";
+			}
+			scanner.close();
+
+			return response;
+		}
+		return null;
+	}
+
+	@SuppressWarnings("deprecation")
+	public static void setStudentData(String studentID, String firstName, String lastName, String averageGrade,
+			String courses) throws IOException {
+		HttpURLConnection connection = (HttpURLConnection) new URL(
+				"http://localhost:8080/OpdrachtBOIS/student/" + studentID).openConnection();
+		connection.setRequestMethod("POST");
+
+		String postData = "studentID=" + URLEncoder.encode(studentID);
+		postData += "&studentID=" + URLEncoder.encode(studentID);
+		postData += "&firstName=" + URLEncoder.encode(firstName);
+		postData += "&lastName=" + URLEncoder.encode(lastName);
+		postData += "&averageGrade=" + URLEncoder.encode(averageGrade);
+		postData += "&courses=" + URLEncoder.encode(courses);
+
+		connection.setDoOutput(true);
+		OutputStreamWriter wr = new OutputStreamWriter(connection.getOutputStream());
+		wr.write(postData);
+		wr.flush();
+
+		int responseCode = connection.getResponseCode();
+		if (responseCode == 200) {
+			System.out.println("POST was succesful.");
+		} else if (responseCode == 404) {
+			System.out.println("Wrong password.");
+		}
+	}
+
+}
