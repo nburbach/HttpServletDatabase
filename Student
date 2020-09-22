@@ -1,0 +1,66 @@
+package OIS;
+
+import java.util.Arrays;
+
+public class Student {
+	
+	String studentID, firstName, lastName,  averageGrade;
+	String[] courses;
+	
+	public Student() {
+		
+	}
+	
+	public Student(String studentID, String firstName, String lastName, String averageGrade, String[] courses) {
+		this.studentID = studentID;
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.averageGrade = averageGrade;
+		this.courses = courses;
+	}
+	
+	public String getStudentID() {
+		return studentID;
+	}
+	
+	public void setStudentID(String newStudentID) {
+		this.studentID = newStudentID;
+	}
+	
+	public String getFirstName() {
+		return firstName;
+	}
+	
+	public void setFirstName(String newFirstName) {
+		this.firstName = newFirstName;
+	}
+	
+	public String getLastName() {
+		return lastName;
+	}
+	
+	public void setLastName(String newLastName) {
+		this.lastName = newLastName;
+	}
+	
+	public String getAverageGrade() {
+		return averageGrade;
+	}
+	
+	public void setAverageGrade(String newAverageGrade) {
+		this.averageGrade = newAverageGrade;
+	}
+	
+	public String getCourses() {
+		String string = Arrays.toString(this.courses);
+		return string.substring(1, string.length()-1);
+	}
+	
+	public String[] getCourseList() {
+		return this.courses;
+	}
+	
+	public void setCourses(String[] newCourses) {
+		this.courses = newCourses;
+	}
+}
