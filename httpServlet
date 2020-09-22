@@ -1,0 +1,64 @@
+package OIS;
+
+import java.io.IOException;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.json.JSONObject;
+
+
+public class StudentServlet extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+
+		String requestUrl = request.getRequestURI();
+		String studentID = requestUrl.substring("/student/".length() + 13);
+		String search = studentID;
+
+		try {
+			int i = Integer.parseInt(studentID);
+			Student student = Database.getDatabase().getStudent(search);
+			String json = "{\n";
+			json += "\"studentID\":" + JSONObject.quote(student.getStudentID()) + ",\n";
+			json += "\"firstName\": " + JSONObject.quote(student.getFirstName()) + ",\n";
+			json += "\"lastName\": " + JSONObject.quote(student.getLastName()) + ",\n";
+			json += "\"averageGrade\": " + JSONObject.quote(student.getAverageGrade()) + ",\n";
+			json += "\"courses\": " + JSONObject.quote(student.getCourses()) + ",\n";
+			json += "}";
+			response.getOutputStream().println(json);
+		} catch (NumberFormatException nfe) {
+			if (Database.getDatabase().getUsername(studentID) != null) {
+				String password = Database.getDatabase().getPassword(studentID);
+				response.getOutputStream().println(password);
+			} else {
+				response.getOutputStream().println("empty");
+			}
+		}
+
+	}
+
+
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		if (request.getParameter("username") != null) {
+			String username = request.getParameter("username");
+			String password = request.getParameter("password");
+			Database.getDatabase().addUser(username, password);
+
+		} else {
+			String studentID = request.getParameter("studentID");
+			String firstName = request.getParameter("firstName");
+			String lastName = request.getParameter("lastName");
+			String averageGrade = request.getParameter("averageGrade");
+			String[] courses = request.getParameterValues("courses");
+
+			Database.getDatabase().addStudent(new Student(studentID, firstName, lastName, averageGrade, courses));
+		}
+	}
+
+}
