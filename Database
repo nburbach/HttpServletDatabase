@@ -1,0 +1,53 @@
+package OIS;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class Database {
+
+	private Map<String, Student> studentMap = new HashMap<>();
+	private Map<String, String> passwordMap = new HashMap<>();
+	
+	private static Database database = new Database();
+	
+	public static Database getDatabase() {
+		return database;
+	}
+	
+	private Database() {
+		String courses1 = "mechanica, statica";
+		String courses2 = "lineaire algebra, analyse 2";
+		String courses3 = "biologie, aardrijkskunde, tekenen";
+		studentMap.put("4155866", new Student("4155866", "Niels", "Burbach", "9.2", courses1.split(",")));
+		studentMap.put("1234567", new Student("1234567", "Klaas", "Vaak", "5.3", courses2.split(",")));
+		studentMap.put("10203044", new Student("10203044", "Elice", "Groeneveld", "10", courses3.split(",")));
+		passwordMap.put("NielsBurbach", "NBurbach");
+	}
+	
+	public boolean userExists(String username) {
+		if(passwordMap.get(username) != null) {
+			return true;
+		}
+		return false;
+	}
+	
+	public String getPassword(String studentID) {
+		return passwordMap.get(studentID);
+	}
+	
+	public String getUsername(String username) {
+		return passwordMap.get(username);
+	}
+	
+	public void addUser(String user, String password) {
+		passwordMap.put(user, password);
+	}
+	
+	public Student getStudent(String studentID) {
+		return studentMap.get(studentID);
+	}
+	
+	public void addStudent(Student student) {
+		studentMap.put(student.getStudentID(), student);
+	}
+}
